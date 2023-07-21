@@ -67,3 +67,5 @@ The reason for this is that we are making a large number of API requests to TFC 
 * For some of these states, give me the full state file
 
 Realistically, a better solution would be to integrate this with an IPAM solution.
+
+If you do not have an IPAM solution... you should probably invest in an IPAM solution.
