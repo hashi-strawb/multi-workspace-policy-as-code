@@ -3,12 +3,6 @@
 This is an example policy which checks if a specified CIDR range overlaps with any
 deployed AWS VPCs.
 
-This is meant as a proof-of-concept of the idea, and not a fully functional policy.
-
-Notabaly, the policy DOES NOT check any resources in your Terraform Plan. It is only testable with params.
-(getting CIDR ranges for planned VPCs is considered trivial and left as an exercise for the reader)
-
-
 As an example of this running through the CLI:
 
 ```
@@ -52,7 +46,18 @@ to fail.
 
 ## Disclaimers
 
-Pay close attention to how long these policy tests took to run: 7.2 seconds (or 3.6 per policy check).
+This is meant as a proof-of-concept of the idea, and not a fully functional policy.
+
+Notabaly, the policy DOES NOT check any resources in your Terraform Plan. It is only testable with params.
+
+Getting CIDR ranges for planned VPCs is considered trivial and left as an exercise for the reader.
+
+A complete and useful version of this policy would also want to compare CIDR ranges within a single workspace.
+It should probably do that part first, and fail fast, before ever making any API requests.
+
+
+
+Also, pay close attention to how long these policy tests took to run: 7.2 seconds (or 3.6 per policy check).
 While testing, I had a TFC Org with 18 workspaces, of which 4 are currently managing resources, of which 1 has a VPC.
 So you can imagine that this policy would probably take an unreasonable amount of time to run.
 
