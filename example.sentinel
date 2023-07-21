@@ -21,9 +21,13 @@ overlap = false
 # Now iterate over all of our workspaces
 for workspaces_resp.data as workspace {
 
+	# Print info about the VPC we found
+	print("")
+	print(workspace.id + " " + workspace.attributes.name)
+
 	# Ignore workspaces which are not managing resources
 	if (workspace.attributes["resource-count"] == 0) {
-		#print("No resources in this workspace")
+		print("No resources in this workspace")
 		continue
 	}
 
@@ -46,43 +50,43 @@ for workspaces_resp.data as workspace {
 	}
 
 	# If, after checking all resources in our state, we find we have no VPCs... move on to the next workspace
-	if ! has_vpc {
-		#print("No VPC in this workspace")
+	if !has_vpc {
+		print("No VPC in this workspace")
 		continue
 	}
 
-
 	# Now we know we have a VPC in this workspace, we want to get the full state file and parse it
-	statefile_req = http.request( state_resp.data.attributes["hosted-state-download-url"] )
+	statefile_req = http.request(state_resp.data.attributes["hosted-state-download-url"])
 	statefile_resp = json.unmarshal(http.get(statefile_req).body)
 
 	for statefile_resp.resources as resource {
 
 		if resource.type == "aws_vpc" {
-			
+
 			for resource.instances as instance {
 
 				# Now finally, check if there is overlap between our CIDR range and the VPC we just found
 				# I.e. VPC contains our CIDR, or our CIDR contains the VPC
-				if sockaddr.is_contained( instance.attributes.cidr_block, cidr ) or sockaddr.is_contained( cidr, instance.attributes.cidr_block ) {
+				if sockaddr.is_contained(instance.attributes.cidr_block, cidr) or sockaddr.is_contained(cidr, instance.attributes.cidr_block) {
 
-					# Print info about the VPC we found
-					print("")
-					print( workspace.id + " " + workspace.attributes.name)
-					print( "\t" + resource.module + " " + resource.type + "." + resource.name )
-
-					print ("\t\tThis VPC overlaps with our CIDR Range")
-					print( "\t\tcidr_block: " + instance.attributes.cidr_block)
-					print( "\t\tour cidr: " + cidr)
+					print("\t" + resource.module + " " + resource.type + "." + resource.name)
+					print("\t\tThis VPC overlaps with our CIDR Range")
+					print("\t\tcidr_block: " + instance.attributes.cidr_block)
+					print("\t\tour cidr: " + cidr)
 
 					overlap = true
 				}
 			}
 		}
 	}
+
+	if !overlap {
+		print("No CIDR overlap")
+	}
+
 }
 
 # Does our CIDR range overlap with any existing VPCs?
 main = rule {
-	! overlap
+	!overlap
 }
