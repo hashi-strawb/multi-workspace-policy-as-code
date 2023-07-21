@@ -69,3 +69,5 @@ The reason for this is that we are making a large number of API requests to TFC 
 Realistically, a better solution would be to integrate this with an IPAM solution.
 
 If you do not have an IPAM solution... you should probably invest in an IPAM solution.
+
+For example, there is a community provider for phpIPAM: https://registry.terraform.io/providers/Ouest-France/phpipam/latest/docs
