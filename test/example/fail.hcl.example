@@ -1,0 +1,29 @@
+
+param "token" {
+  # Put your TFE_TOKEN here
+  #
+  # (Ideally I'd have this pulled automatically when running the tests, but I
+  # haven't figured out how to do that yet)
+  
+  value = ""
+}
+
+param "org" {
+  # Here is my TFC org. When running tests, I'll have a workspace deployed which
+  # contains a VPC with a CIDR range that overlaps with my CIDR range
+
+  value = "fancycorp"
+}
+
+param "cidr" {
+  # For this test policy, we pass in a CIDR range as an input, for easy testing
+  # Practically... this should come from a resource in our TF Plan
+
+  value = "10.0.0.0/24"
+}
+
+test {
+  rules = {
+    main = false
+  }
+}

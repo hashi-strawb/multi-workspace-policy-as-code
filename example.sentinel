@@ -1,0 +1,88 @@
+import "http"
+import "json"
+import "sockaddr"
+
+# We take a CIDR range as a parameter, for testing purposes
+# A real Sentinel policy would compare to any networks we're creating in our plan
+param cidr
+
+# TFC Org and Token
+param token
+param org
+
+# First, find all workspaces in our org
+# NOTE: This is a proof-of-concept, and does not support paging yet
+workspaces_req = http.request("https://app.terraform.io/api/v2/organizations/" + org + "/workspaces").with_header("Authorization", "Bearer " + token)
+workspaces_resp = json.unmarshal(http.get(workspaces_req).body)
+
+# Assume no IP overlap for now, until proven otherwise
+overlap = false
+
+# Now iterate over all of our workspaces
+for workspaces_resp.data as workspace {
+
+	# Ignore workspaces which are not managing resources
+	if (workspace.attributes["resource-count"] == 0) {
+		#print("No resources in this workspace")
+		continue
+	}
+
+	# Get the latest state file
+	state_req = http.request("https://app.terraform.io/api/v2/workspaces/" + workspace.id + "/current-state-version").with_header("Authorization", "Bearer " + token)
+	state_resp = json.unmarshal(http.get(state_req).body)
+
+	# This gives us enough info to determine if the workspace contains, for example, an AWS VPC
+	# For now, assume we do not until proven otherwise
+	has_vpc = false
+
+	for state_resp.data.attributes.resources as resource {
+		#print( resource.type )
+
+		# Using only AWS VPCs for this PoC. You can also include Azure VNets for example
+		if resource.type == "aws_vpc" {
+			# No VPC? No problem!
+			has_vpc = true
+		}
+	}
+
+	# If, after checking all resources in our state, we find we have no VPCs... move on to the next workspace
+	if ! has_vpc {
+		#print("No VPC in this workspace")
+		continue
+	}
+
+
+	# Now we know we have a VPC in this workspace, we want to get the full state file and parse it
+	statefile_req = http.request( state_resp.data.attributes["hosted-state-download-url"] )
+	statefile_resp = json.unmarshal(http.get(statefile_req).body)
+
+	for statefile_resp.resources as resource {
+
+		if resource.type == "aws_vpc" {
+			
+			for resource.instances as instance {
+
+				# Now finally, check if there is overlap between our CIDR range and the VPC we just found
+				# I.e. VPC contains our CIDR, or our CIDR contains the VPC
+				if sockaddr.is_contained( instance.attributes.cidr_block, cidr ) or sockaddr.is_contained( cidr, instance.attributes.cidr_block ) {
+
+					# Print info about the VPC we found
+					print("")
+					print( workspace.id + " " + workspace.attributes.name)
+					print( "\t" + resource.module + " " + resource.type + "." + resource.name )
+
+					print ("\t\tThis VPC overlaps with our CIDR Range")
+					print( "\t\tcidr_block: " + instance.attributes.cidr_block)
+					print( "\t\tour cidr: " + cidr)
+
+					overlap = true
+				}
+			}
+		}
+	}
+}
+
+# Does our CIDR range overlap with any existing VPCs?
+main = rule {
+	! overlap
+}
